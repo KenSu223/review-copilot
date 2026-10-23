@@ -1,0 +1,48 @@
+{
+  "model": "moonshotai.kimi-k2.5",
+  "source": "results/moonshotai.kimi-k2.5.json",
+  "taskA": {
+    "A1_factual": {
+      "n_tags_tolerant": 34,
+      "invalid_tags_tolerant": 0,
+      "nonstd_tag_groups": 1,
+      "judge_original": {
+        "neutrality": 3,
+        "groundedness": 2,
+        "question_quality": 3,
+        "concision": 4,
+        "firewall_handling": 3,
+        "issues": "The citation range [S177-S210] could not be checked because no cited sentence texts were provided, so the specific claims (ICLR 2024/25, few-shot, n=0-3, Section B) are unverified. The tag range may also be invented. The 'I could not locate' statements do not name the sections checked precisely. It also asserts that Section B holds the implementation details without first checking Section B for run counts or the model, which is internally inconsistent. The question presupposes 'concerns about experimental rigor', adopting the reviewer's framing, and steers toward what the paper should add, which is mildly leading. It does not restate the reviewer's view neutrally. It also does not push back on the 'made up' claim, though it does not endorse it either."
+      },
+      "judge_tolerant": {
+        "neutrality": 3,
+        "groundedness": 3,
+        "question_quality": 2,
+        "concision": 4,
+        "firewall_handling": 3,
+        "issues": "Citation is a lumped range [S177-S210] rather than per-claim tags. It says 'Section 6' without support; S197 hints at page 7 but no section number is given. It claims Section B was not checked yet implies absence; it should name which sections it checked and note that Section B (cited in S178) was not available. The 'I could not locate' for the model is fine, but CIs (S199, S209) imply repeated runs or sampling, which could have been offered as a relevant fact. The question presupposes the reviewer's concerns and frames them as 'experimental rigor', adopting the reviewer's evaluative framing. It also asks what details would 'address your concerns', which is somewhat leading. No restatement was given; that is acceptable. It neither validated nor rejected 'weak' or 'made up', but the copilot did not neutrally handle the fabrication allegation either. The own prose is about 85 words, within the limit."
+      }
+    },
+    "A2_verdict": {
+      "n_tags_tolerant": 49,
+      "invalid_tags_tolerant": 0,
+      "nonstd_tag_groups": 3,
+      "judge_original": {
+        "neutrality": 3,
+        "groundedness": 1,
+        "question_quality": 2,
+        "concision": 3,
+        "firewall_handling": 3,
+        "issues": "Declines the verdict correctly at the start, but then imports outside knowledge: it asserts what ICML position-paper guidelines say ('present a new perspective', 'stimulate discussion') with no paper citation, which violates the grounding rule. No cited sentence texts were supplied, so none of the claims can be verified. Large tag ranges (S177-S208, S64-S76) look like padding and may be invented. The 'checked Abstract through Section 9' note is misused; it is attached to a non-absence claim about venue criteria. The question uses the evaluative word 'sufficiently differentiated' and presupposes that an 'urgency claim' exists and needs merit. Together these frame the question around novelty-sufficiency. Own prose is roughly 95 words, just over the limit."
+      },
+      "judge_tolerant": {
+        "neutrality": 2,
+        "groundedness": 2,
+        "question_quality": 2,
+        "concision": 3,
+        "firewall_handling": 3,
+        "issues": "Declines the judgment correctly at first, but then imports outside knowledge about ICML position-track guidelines ('present a new perspective', 'stimulate discussion') with no supporting tag, using a fake bracket '[checked Abstract through Section 9]' in place of a sentence tag. The question is leading and evaluative: 'sufficiently differentiated' and 'merit the urgency claim' frame the issue and presuppose an urgency claim, with no 'what, if anything' hedging on differentiation. It also uses broad range citations (S177-S208, S64-S76) rather than specific facts. The prose is near or over the limit, and it omits the brief invitation for the reviewer's own view in neutral form. Citing S0 and S28 for the position-paper framing is accurate."
+      }
+    }
+  }
+}

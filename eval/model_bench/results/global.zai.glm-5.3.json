@@ -1,0 +1,47 @@
+{
+  "model": "global.zai.glm-5.3",
+  "backend": "converse",
+  "region": "us-west-2",
+  "price_per_mtok": [
+    1.68,
+    5.28
+  ],
+  "taskA": {},
+  "taskB": {
+    "correct": 0,
+    "total": 6,
+    "avg_sec": 0.0,
+    "usd_total": 0.0,
+    "methods": [],
+    "details": [
+      {
+        "case": "clean",
+        "error": "AccessDeniedException('An error occurred (AccessDeniedException) when calling the Converse operation: zai.glm-5.3 is not available for this account. You can explore other available models on Amazon Bedrock. For additional access options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-s"
+      },
+      {
+        "case": "clean_absence",
+        "error": "AccessDeniedException('An error occurred (AccessDeniedException) when calling the Converse operation: zai.glm-5.3 is not available for this account. You can explore other available models on Amazon Bedrock. For additional access options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-s"
+      },
+      {
+        "case": "leading",
+        "error": "AccessDeniedException('An error occurred (AccessDeniedException) when calling the Converse operation: zai.glm-5.3 is not available for this account. You can explore other available models on Amazon Bedrock. For additional access options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-s"
+      },
+      {
+        "case": "praise",
+        "error": "AccessDeniedException('An error occurred (AccessDeniedException) when calling the Converse operation: zai.glm-5.3 is not available for this account. You can explore other available models on Amazon Bedrock. For additional access options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-s"
+      },
+      {
+        "case": "subtle_framing",
+        "error": "AccessDeniedException('An error occurred (AccessDeniedException) when calling the Converse operation: zai.glm-5.3 is not available for this account. You can explore other available models on Amazon Bedrock. For additional access options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-s"
+      },
+      {
+        "case": "two_questions",
+        "error": "AccessDeniedException('An error occurred (AccessDeniedException) when calling the Converse operation: zai.glm-5.3 is not available for this account. You can explore other available models on Amazon Bedrock. For additional access options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-s"
+      }
+    ]
+  },
+  "errors": [
+    "A1_factual: AccessDeniedException('An error occurred (AccessDeniedException) when calling the Converse operation: zai.glm-5.3 is not available for this account. You can explore other available models on Amazon Bedrock. For additional access options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/')",
+    "A2_verdict: AccessDeniedException('An error occurred (AccessDeniedException) when calling the Converse operation: zai.glm-5.3 is not available for this account. You can explore other available models on Amazon Bedrock. For additional access options, contact AWS Sales at https://aws.amazon.com/contact-us/sales-support/')"
+  ]
+}

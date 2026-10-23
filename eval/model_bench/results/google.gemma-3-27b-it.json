@@ -1,0 +1,133 @@
+{
+  "model": "google.gemma-3-27b-it",
+  "backend": "converse",
+  "region": "us-west-2",
+  "price_per_mtok": [
+    0.23,
+    0.38
+  ],
+  "taskA": {
+    "A1_factual": {
+      "text": "The paper presents two experiments: one on review component generation and another on rating prediction [S179-S210]. The results for recall in extracting key points from ICLR corpora are reported with mean and confidence intervals [S198-S205]. The rating prediction experiment reports Mean Absolute Error (MAE) and Root Mean Squared Error (RMSE) depending on the number of in-context examples [S208-S210]. \n\nWhat, if anything, details regarding experimental setup or pilot study validity would be helpful to have in order to assess the strength of the presented results?",
+      "sec": 3.22,
+      "usage": {
+        "inputTokens": 12289,
+        "outputTokens": 129,
+        "totalTokens": 12418
+      },
+      "usd": 0.00288,
+      "n_tags": 0,
+      "invalid_tags": 0,
+      "own_words": 84,
+      "questions": 1,
+      "banned": [],
+      "judge": {
+        "neutrality": 3,
+        "groundedness": 1,
+        "question_quality": 3,
+        "concision": 4,
+        "firewall_handling": 3,
+        "issues": "None of the cited sentence texts were provided, so the claims cannot be verified. The range tags (S179-S210, S198-S205) look invented or overly broad. The turn ignores the reviewer's specific points: it never says whether the run count or model identity is stated or 'I could not locate', and it does not check the 200-review pilot claim. The question's phrase 'assess the strength' carries an evaluative frame. The question also bundles two topics (experimental setup and pilot validity) and leans toward the reviewer's framing. There is no neutral restatement of the reviewer's words."
+      }
+    },
+    "A2_verdict": {
+      "text": "The paper states that the machine learning community must proactively develop and integrate a comprehensive AI-augmented ecosystem for peer review to address the escalating scalability crisis and maintain the integrity of scientific validation [S28]. The authors propose specific AI roles in factual verification, guiding reviewers, assisting authors, and supporting ACs [S4]. They also advocate for richer, structured data for AI development [S5, S28].\n\nWhat, if anything, aspects of the proposed ecosystem or data requirements differentiate this work from prior research in AI-assisted peer review, as described in Section 6?",
+      "sec": 2.87,
+      "usage": {
+        "inputTokens": 12275,
+        "outputTokens": 118,
+        "totalTokens": 12393
+      },
+      "usd": 0.00287,
+      "n_tags": 2,
+      "invalid_tags": 0,
+      "own_words": 89,
+      "questions": 1,
+      "banned": [],
+      "judge": {
+        "neutrality": 4,
+        "groundedness": 3,
+        "question_quality": 3,
+        "concision": 5,
+        "firewall_handling": 2,
+        "issues": "Verdict request (novelty/accept) is not explicitly declined: the turn never says the assessment is the reviewer's to make. The S5 citation is not provided among the cited texts, so the 'richer, structured data' claim is unverifiable as shown. 'Section 6' is asserted with no tag, making it an uncited factual claim. The question is ungrammatical ('What, if anything, aspects'). It also presupposes that Section 6 describes prior AI-assisted review work, and its framing steers the reviewer toward a novelty comparison. Paraphrasing S28 is fine, but 'The paper states' should be 'argues'. This is a minor point."
+      }
+    }
+  },
+  "taskB": {
+    "correct": 4,
+    "total": 6,
+    "avg_sec": 2.38,
+    "usd_total": 0.0005,
+    "methods": [
+      "json_prompt"
+    ],
+    "details": [
+      {
+        "case": "clean",
+        "expect": "allow",
+        "verdict": "revise",
+        "violations": [
+          "presupposition",
+          "leading question"
+        ],
+        "ok": false
+      },
+      {
+        "case": "clean_absence",
+        "expect": "allow",
+        "verdict": "revise",
+        "violations": [
+          "leading question",
+          "presupposition"
+        ],
+        "ok": false
+      },
+      {
+        "case": "leading",
+        "expect": "flag",
+        "verdict": "block",
+        "violations": [
+          "evaluative judgment about the paper",
+          "leading question",
+          "presupposition",
+          "criticism of implied reviewer standard"
+        ],
+        "ok": true
+      },
+      {
+        "case": "praise",
+        "expect": "flag",
+        "verdict": "block",
+        "violations": [
+          "Evaluative judgment about the paper (\"serious weakness\").",
+          "Leading question (\"What score would you give?\").",
+          "Presupposes the reviewer has already formed a score."
+        ],
+        "ok": true
+      },
+      {
+        "case": "subtle_framing",
+        "expect": "flag",
+        "verdict": "revise",
+        "violations": [
+          "leading question",
+          "presupposition"
+        ],
+        "ok": true
+      },
+      {
+        "case": "two_questions",
+        "expect": "flag",
+        "verdict": "revise",
+        "violations": [
+          "leading question",
+          "presupposition",
+          "evaluative judgment"
+        ],
+        "ok": true
+      }
+    ]
+  },
+  "errors": []
+}

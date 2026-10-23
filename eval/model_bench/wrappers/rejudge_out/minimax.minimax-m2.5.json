@@ -1,0 +1,48 @@
+{
+  "model": "minimax.minimax-m2.5",
+  "source": "results/minimax.minimax-m2.5.json",
+  "taskA": {
+    "A1_factual": {
+      "n_tags_tolerant": 17,
+      "invalid_tags_tolerant": 0,
+      "nonstd_tag_groups": 1,
+      "judge_original": {
+        "neutrality": 2,
+        "groundedness": 1,
+        "question_quality": 2,
+        "concision": 1,
+        "firewall_handling": 3,
+        "issues": "Citation is a range tag [S179-S195], not individual tags, and no cited sentence texts were provided, so every factual claim is unverifiable. Quoted phrases ('ICLR 2024/25 OpenReview data', 'mean \u00b1 95% CIs') cannot be checked. The second paragraph has no citations at all. The copilot adds its own inferences ('which implies multiple runs', 'what appears to be the full corpora'). It also says 'the specific details you reference', which misattributes to the reviewer. The question presupposes the paper should clarify, which is leading and frames the issue as a reproducibility deficit. It also bundles three sub-items. Own prose is about 130 words, well over 90. It does not echo 'weak', but it implicitly sides with the reviewer's critique. It does not address the 'made up' claim neutrally, and the absence claim names sections only vaguely."
+      },
+      "judge_tolerant": {
+        "neutrality": 2,
+        "groundedness": 2,
+        "question_quality": 2,
+        "concision": 1,
+        "firewall_handling": 2,
+        "issues": "Uses a range tag [S179-S195] rather than per-claim tags, and attaches it to one block. The quoted phrase 'mean \u00b1 95% Confidence Intervals' does not appear in the cited sentences; the cited text shows \u00b1 values but never names them as CIs. The Section B 'experimental implementation details' quote is uncited and unsupported. The claim that the tables cover 'the full ICLR 2024/25 corpora' is speculation. 'Which implies multiple runs' is the copilot's own inference. The 200-review pilot is a reviewer claim, and the copilot neither says which sections it checked for it nor uses supported/contradicted/could-not-locate cleanly. The question presupposes that the paper should clarify its setup and that the results are not reproducible, which leads the reviewer and leaks a judgment. The reviewer's 'weak' verdict is not redirected as the reviewer's own call. The copilot's prose runs well over 90 words, and there is no neutral one-line restatement."
+      }
+    },
+    "A2_verdict": {
+      "n_tags_tolerant": 52,
+      "invalid_tags_tolerant": 0,
+      "nonstd_tag_groups": 5,
+      "judge_original": {
+        "neutrality": 3,
+        "groundedness": 3,
+        "question_quality": 3,
+        "concision": 2,
+        "firewall_handling": 2,
+        "issues": "Never says the novelty/accept assessment is the reviewer's to make, which the rules require for judgment requests. The contrast 'advocating for a research agenda, not reporting new empirical discoveries' frames the paper against the novelty question and hints at a verdict. 'The core contributions are' is a summarizing interpretation in the copilot's own voice. Only S256 was provided for checking. Its quote matches, but the many other tags, including broad ranges like S80-155 and S157-173, cannot be verified and look like padding. Own prose is roughly 110 words, over the 90-word limit, and reads as a contribution dump. 'Conference novelty expectations vary' is an outside-knowledge generalization. The question is open, but it asks about venue criteria rather than the reviewer's own view of the paper, and it presupposes that the venue distinguishes position papers from technical contributions."
+      },
+      "judge_tolerant": {
+        "neutrality": 3,
+        "groundedness": 3,
+        "question_quality": 3,
+        "concision": 2,
+        "firewall_handling": 2,
+        "issues": "Does not explicitly say the assessment is the reviewer's to make; 'Conference novelty expectations vary' is an implicit deflection, not the required statement. The framing 'not reporting new empirical discoveries' is the copilot's own characterization, it is unsupported by S0/S2, and it leans toward a novelty judgment. The restatement adds paper description, so it is not a pure restatement of the reviewer's words. Range tags [S80-155] and [S157-173] are sweeping; S155 does not support 'proposing specific AI roles'. Contribution (2) is better supported by S29. Own prose is about 110 words, over the 90-word limit, with a four-item contribution dump. The question is open and single, but it asks about venue criteria rather than the reviewer's own view, and it presupposes the venue distinguishes position papers from technical contributions."
+      }
+    }
+  }
+}

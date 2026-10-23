@@ -1,0 +1,48 @@
+{
+  "model": "moonshot.kimi-k2-thinking",
+  "source": "results/moonshot.kimi-k2-thinking.json",
+  "taskA": {
+    "A1_factual": {
+      "n_tags_tolerant": 3,
+      "invalid_tags_tolerant": 0,
+      "nonstd_tag_groups": 1,
+      "judge_original": {
+        "neutrality": 3,
+        "groundedness": 2,
+        "question_quality": 3,
+        "concision": 4,
+        "firewall_handling": 3,
+        "issues": "The restatement 'experiments lack detail' adopts the reviewer's framing as fact, and it drops the reviewer's 'weak' while presenting their claims as established. The texts of S199 and S209 were not provided, so the claims about confidence intervals and the missing run count cannot be verified. S178 supports only that implementation details are in Section B; the claim that no specific model is identified in the main text is an absence claim that names no sections checked. The pilot absence claim says 'in the sections provided' without naming the sections, which violates the rule. The question presupposes that details are missing ('would enable you'). 'Validity' is an evaluative framing, but it is in the reviewer's domain, so this is minor. Exactly one question is asked. Prose is under 90 words."
+      },
+      "judge_tolerant": {
+        "neutrality": 3,
+        "groundedness": 2,
+        "question_quality": 3,
+        "concision": 5,
+        "firewall_handling": 4,
+        "issues": "The restatement 'experiments lack detail' adopts the reviewer's framing instead of using their own words. It also omits the reviewer's 'weak' judgment while asserting a lack of detail as if it were fact. Negative claims are cited to sentences that cannot support an absence: 'does not state the number of runs [S199, S209]' and 'without identifying the specific LLM model in the main text [S178]'. These should use 'I could not locate' and name the sections checked. 'I could not locate any mention of a 200-review pilot in the sections provided' does not name which sections were checked. The question 'What specific experimental details would enable you to assess the validity' presupposes that details are missing. It also leans toward a soundness framing, though it is a single open question. Word count is within the limit. No verdict was given in the copilot's own voice, but the framing partially endorses the reviewer's criticism."
+      }
+    },
+    "A2_verdict": {
+      "n_tags_tolerant": 5,
+      "invalid_tags_tolerant": 0,
+      "nonstd_tag_groups": 2,
+      "judge_original": {
+        "neutrality": 3,
+        "groundedness": 3,
+        "question_quality": 4,
+        "concision": 5,
+        "firewall_handling": 3,
+        "issues": "Never states that the novelty/acceptance assessment is the reviewer's to make. It goes straight to facts, so the verdict request is only implicitly sidestepped. 'but only 0.632' is evaluative/framing language in the copilot's own voice. S258 was provided and does not support 'require richer structured data for advancement'. That clause appears invented or drawn from an uncited sentence. The S0, S28, S182 and S201 texts were not provided, so those claims cannot be verified. Choosing S258 (LLMs struggle) alongside 'only' may nudge the reviewer. The question is open and single, but it presupposes that criteria are being used and frames the paper as 'combines advocacy with illustrative experiments'. Concision is fine."
+      },
+      "judge_tolerant": {
+        "neutrality": 3,
+        "groundedness": 3,
+        "question_quality": 4,
+        "concision": 5,
+        "firewall_handling": 3,
+        "issues": "The turn never states that the novelty and acceptance assessment is the reviewer's to make, which the rules require for verdict requests; it only sidesteps the request. 'but only 0.632' adds evaluative framing in the copilot's voice. The claim that LLMs 'require richer structured data for advancement' is not in S258. The word 'illustrative' and the plural 'ICLR corpora' are not supported by S182 or S201, which mention only ICLR 2025. The question is single and open, but it embeds the copilot's characterization of the paper ('combines advocacy with illustrative experiments'). Length is within limits."
+      }
+    }
+  }
+}

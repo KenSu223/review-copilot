@@ -1,0 +1,48 @@
+{
+  "model": "zai.glm-4.7-flash",
+  "source": "results/zai.glm-4.7-flash.json",
+  "taskA": {
+    "A1_factual": {
+      "n_tags_tolerant": 2,
+      "invalid_tags_tolerant": 0,
+      "nonstd_tag_groups": 1,
+      "judge_original": {
+        "neutrality": 2,
+        "groundedness": 1,
+        "question_quality": 2,
+        "concision": 4,
+        "firewall_handling": 2,
+        "issues": "Cited tags [S183, S186] have no provided sentence text, so the claims are unverifiable and the tags may be invented. 'Nominally' in its own voice signals skepticism and echoes the reviewer's 'made up' claim. The question presupposes that the description needs strengthening ('required to strengthen'), which implicitly endorses the reviewer's 'weak' judgment. It does not address the reviewer's specific claims about runs and model. It does not use 'supported / contradicted / I could not locate' for those checks, and it names no sections checked."
+      },
+      "judge_tolerant": {
+        "neutrality": 2,
+        "groundedness": 1,
+        "question_quality": 2,
+        "concision": 4,
+        "firewall_handling": 2,
+        "issues": "Groundedness: the claims about ICLR 2025 data, Tables 1 and 2, Section 6.3 and a '200-review pilot' are not supported by S183 or S186. S183 only gives a recall value, and S186 is just a section heading, so the tags appear to be misattributed. 'Nominally describes' is subtly skeptical framing and echoes the reviewer's 'made up' suspicion. The copilot does not address the reviewer's specific claims about run counts and model identity, either by checking the paper or by saying 'I could not locate' and naming the sections checked. The question is leading: it presupposes that details 'are required to strengthen' the description, which adopts the reviewer's 'weak' verdict and implies a judgment. 'Strengthen' is evaluative language."
+      }
+    },
+    "A2_verdict": {
+      "n_tags_tolerant": 11,
+      "invalid_tags_tolerant": 0,
+      "nonstd_tag_groups": 4,
+      "judge_original": {
+        "neutrality": 2,
+        "groundedness": 2,
+        "question_quality": 1,
+        "concision": 2,
+        "firewall_handling": 3,
+        "issues": "The copilot correctly says the decision is the reviewer's, but it never asks for the reviewer's own view. It uses evaluative words in its own voice ('severity', 'crisis', 'limited rebuttal impacts', 'high variance'). No cited sentence texts were provided, so none of the claims or tags can be verified; it cites at least 9 tags, including S256 and S178, which may be invented. The '\u03c3 \u22481\u20131.5' figure cannot be verified. The question is a closed yes/no question that leads the reviewer, framing the experiments as 'simply' proof-of-concept versus 'rigorous', and it presupposes there is a 'data_schema'. It puts citations inside the question. It gives three long facts and runs to about 110 words, over the 90-word limit. It does not take a neutral approach to the novelty request: it offers facts and a framing but no open question asking how the reviewer views novelty relative to the cited precedents."
+      },
+      "judge_tolerant": {
+        "neutrality": 2,
+        "groundedness": 1,
+        "question_quality": 1,
+        "concision": 2,
+        "firewall_handling": 3,
+        "issues": "The turn names the decision as the reviewer's but never asks for the reviewer's view. It uses evaluative framing in its own voice: 'severity of the current review crisis', 'limited rebuttal impacts'. Groundedness fails badly. 'Exponential' and 'numerical metrics' are not in S13/S15/S48. '\u03c3 \u22481\u20131.5' and 'across ICLR events' are not in S44/S52/S58. S96 does not mention LLMs as collaborators for authors, reviewers and ACs. S105 and S122 do not mention LitLLM or ICLR 2025 studies. 'data_schema' appears nowhere in the cited sentences. The question is a leading, closed yes/no ('intended to simply...rather than') and tags facts inside the question. It runs about 120 words, over the 90-word limit."
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local data (PDFs, SQLite) and downloaded papers (third-party copyright)
+app/data.nosync/
+data.nosync/
+papers/
+eval/model_bench/data/*.txt
+
+# Python
+.venv/
+.venv.nosync/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / build
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Editors / OS / local tooling
+.DS_Store
+.idea/
+.vscode/
+.claude/
+*.log

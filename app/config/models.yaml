@@ -1,0 +1,18 @@
+# LLM roles -> models on Amazon Bedrock (bearer token from AWS_BEARER_TOKEN_BEDROCK).
+# Chosen from the 29-model benchmark in ../eval/model_bench/COMPARISON.md (2026-10-21).
+# Claude models use Bedrock's Messages-API endpoint (native Citations + prompt caching);
+# other models use the Bedrock Converse API (provider: converse). Swap per role here.
+provider:
+  base_url: https://bedrock-mantle.us-east-1.api.aws/anthropic
+
+roles:
+  realize:          {model: anthropic.claude-opus-5-5, effort: low, max_tokens: 4000, timeout: 45}    # user-facing Socratic turn (citations)
+  statement_check:  {model: anthropic.claude-opus-5-5, effort: low, max_tokens: 3000, timeout: 45}    # verify reviewer's factual claims (citations)
+  analyze:          {model: anthropic.claude-sonnet-5, effort: low, max_tokens: 3000, timeout: 30}    # dialogue act + opinion units (structured)
+  guard:            {model: zai.glm-5, provider: converse, region: us-west-2, max_tokens: 2000}  # cross-family firewall audit
+  entailment:       {model: anthropic.claude-sonnet-5, effort: low, max_tokens: 3000}    # synthesis drift check (structured)
+  paper_map:        {model: anthropic.claude-opus-5-5, effort: low, max_tokens: 16000}   # objective extraction (structured)
+  synthesize:       {model: anthropic.claude-opus-5-5, effort: low, max_tokens: 12000}   # review outline from ledger (structured)
+
+# Client-side fallback chain (Bedrock has no server-side `fallbacks`): refusal / 5xx / 429 / converse failure.
+fallback: [anthropic.claude-sonnet-5, anthropic.claude-opus-4-8]

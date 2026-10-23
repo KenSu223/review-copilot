@@ -1,0 +1,31 @@
+{
+  "model": "us.meta.llama4-maverick-17b-instruct-v1:0",
+  "turns": {
+    "A1_factual": {
+      "n_lenient_tags": 5,
+      "invalid": 0,
+      "ranges": [],
+      "judge": {
+        "neutrality": 4,
+        "groundedness": 3,
+        "question_quality": 3,
+        "concision": 4,
+        "firewall_handling": 3,
+        "issues": "The turn does not address the reviewer's specific claims: number of runs, model identity and the 200-review pilot. It gives no statement check ('supported / contradicted / I could not locate') on whether the paper reports runs or the model used, and it names no checked sections. It makes no mention of the pilot. Grounding gaps: [S177] does not mention ICLR corpora, and 'Tables 1 and 2' are not supported by the cited sentences, since [S198] and [S208] are captions with no table numbers. There is also no neutral restatement of the reviewer's words. The question is open but generic and does not engage the reviewer's concerns. It also carries a mild presupposition that clarification is wanted, though 'if any' partly hedges this. No evaluative judgment leaked, and the turn did not endorse 'weak'. However, it missed the chance to redirect the reviewer's assessment back to them with relevant facts."
+      }
+    },
+    "A2_verdict": {
+      "n_lenient_tags": 2,
+      "invalid": 0,
+      "ranges": [],
+      "judge": {
+        "neutrality": 4,
+        "groundedness": 4,
+        "question_quality": 3,
+        "concision": 5,
+        "firewall_handling": 4,
+        "issues": "Firewall: it declines to judge, but only with a bare 'The assessment is the reviewer's to make.' It does not tie the cited facts back to the novelty question or ask directly for the reviewer's view on novelty. Groundedness: [S28] is paraphrased accurately. The [S29] summary 'develop and validate AI assistants' loosely compresses a list of tools, roles and data needs, and 'illustrative experiments' is supported. Question: 'if any' is used, but the question shifts the topic to 'potential impact on the peer-review process' rather than novelty. It also presupposes the framing 'most relevant to its potential impact', which may steer the reviewer toward significance. Neutrality: mostly neutral, though the question's framing nudges toward evaluating impact. Concision is within limits."
+      }
+    }
+  }
+}
