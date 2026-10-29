@@ -43,6 +43,14 @@ class ReviewSession(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=_now)
 
 
+class ReviewerProfile(SQLModel, table=True):
+    """One-time onboarding answers (level, criteria, help style). Single local user: id "default"."""
+    id: str = Field(primary_key=True)
+    data: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
+
+
 class Event(SQLModel, table=True):
     """Append-only interaction trace (messages, analyses, checks, guard verdicts, edits)."""
     pk: Optional[int] = Field(default=None, primary_key=True)

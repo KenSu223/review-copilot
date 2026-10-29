@@ -1,14 +1,15 @@
-"""FastAPI app: paper ingest + blocks (P1). Chat, review, and export routes land in later phases."""
+"""FastAPI app: paper ingest, reviewer profile, evidence-led review sessions, draft, scores, export."""
 import json
 import logging
 
 from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from .config import PDF_DIR
 from .db import Block, Paper, PaperMap, ReviewSession, get_session, init_db
+from .dialogue import criteria as C
 from .db import engine as db_engine
 from .dialogue import engine, review
 from .ingest import build_map, fetch_arxiv, parse_and_save, store_pdf
@@ -103,33 +104,62 @@ def get_blocks(pid: str, s: Session = Depends(get_session)) -> list[dict]:
              "text": b.text, "boxes": b.boxes} for b in rows]
 
 
-# ---------------------------------------------------------------- review sessions (Socratic dialogue)
+# ---------------------------------------------------------------- reviewer profile (onboarding)
+@app.get("/api/profile")
+def get_profile() -> dict:
+    return {"profile": engine.load_profile(), "options": {
+        "levels": C.LEVELS, "criteria": [{k: c[k] for k in ("key", "label", "plain", "where")} for c in C.CRITERIA],
+        "starter_lens": C.STARTER_LENS, "familiarity": C.FAMILIARITY, "read_status": C.READ_STATUS,
+        "budgets": list(C.CARDS_FOR_BUDGET), "field_help": C.FIELD_HELP, "field_help_source": C.FIELD_HELP_SOURCE}}
+
+
+class ProfileBody(BaseModel):
+    data: dict
+
+
+@app.put("/api/profile")
+def put_profile(req: ProfileBody) -> dict:
+    data = dict(req.data)
+    if data.get("level") not in C.LEVELS:
+        raise HTTPException(400, "level must be one of L0-L3")
+    data["criteria"] = [c for c in data.get("criteria", []) if c.get("key") in C.CRITERION][:5]
+    return {"profile": engine.save_profile(data)}
+
+
+# ---------------------------------------------------------------- review sessions (evidence-led dialogue)
 class NewSession(BaseModel):
     paper_id: str
+    paper_ctx: dict = {}  # familiarity, read_status, time_budget
+    flow: str = "evidence"  # evidence | commit_first (legacy, for the A/B comparison)
 
 
 class TurnRequest(BaseModel):
     text: str = ""
-    action: str = ""  # "" | start | next | skip | confirm | deeper | goto:<dimension>
+    # "" | start | react:<looks_good|mixed|off|not_sure> | more | skip | done | keep | card:<id>
+    action: str = ""
 
 
 @app.post("/api/sessions")
 def new_session(req: NewSession, s: Session = Depends(get_session)) -> dict:
     s.get(Paper, req.paper_id) or _404()
-    rs = engine.create_session(req.paper_id)
+    if req.flow not in ("evidence", "commit_first"):
+        raise HTTPException(400, "unknown flow")
+    rs = engine.create_session(req.paper_id, req.paper_ctx, req.flow)
     return {"id": rs.id, "paper_id": rs.paper_id}
 
 
 @app.get("/api/papers/{pid}/sessions")
 def list_sessions(pid: str, s: Session = Depends(get_session)) -> list[dict]:
     rows = s.exec(select(ReviewSession).where(ReviewSession.paper_id == pid).order_by(ReviewSession.updated_at.desc()))
-    return [{"id": r.id, "updated_at": r.updated_at, "turn": (r.state or {}).get("turn", 0)} for r in rows]
+    return [{"id": r.id, "updated_at": r.updated_at, "turn": (r.state or {}).get("turn", 0),
+             "flow": (r.state or {}).get("flow", "commit_first")} for r in rows
+            if (r.state or {}).get("origin", "app") != "eval"]  # persona-suite sessions stay out of the app
 
 
 @app.get("/api/sessions/{sid}")
 def get_review_session(sid: str, s: Session = Depends(get_session)) -> dict:
     rs = s.get(ReviewSession, sid) or _404()
-    return {"id": rs.id, "paper_id": rs.paper_id, "state": engine.public_state(rs.state or engine.new_state()),
+    return {"id": rs.id, "paper_id": rs.paper_id, "state": engine.public_state(rs.state or {}),
             "messages": engine.transcript(sid)}
 
 
@@ -140,6 +170,52 @@ def take_turn(sid: str, req: TurnRequest) -> StreamingResponse:
             yield f"data: {json.dumps(ev, default=str)}\n\n"
     return StreamingResponse(events(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+class RailOp(BaseModel):
+    op: str  # up | down | skip | restore
+
+
+@app.post("/api/sessions/{sid}/agenda/{card_id}")
+def agenda_rail(sid: str, card_id: str, req: RailOp) -> dict:
+    if engine.turn_running(sid):
+        raise HTTPException(409, "A turn is in progress; try again in a moment.")
+    try:
+        return engine.rail(sid, card_id, req.op)
+    except KeyError:
+        _404()
+
+
+class FactsBody(BaseModel):
+    fact_ids: list[str]
+
+
+@app.post("/api/sessions/{sid}/facts")
+def confirm_facts(sid: str, req: FactsBody) -> dict:
+    return engine.confirm_facts(sid, req.fact_ids)
+
+
+class CheckConfirm(BaseModel):
+    turn: int
+    index: int = 0
+
+
+@app.post("/api/sessions/{sid}/checks/confirm")
+def confirm_check(sid: str, req: CheckConfirm) -> dict:
+    try:
+        return engine.confirm_check(sid, req.turn, req.index)
+    except KeyError:
+        _404()
+
+
+class RememberBody(BaseModel):
+    criterion: str
+    accept: bool
+
+
+@app.post("/api/sessions/{sid}/remember")
+def remember(sid: str, req: RememberBody) -> dict:
+    return engine.remember(sid, req.criterion, req.accept)
 
 
 # ---------------------------------------------------------------- ledger, draft, scores, export
@@ -170,6 +246,29 @@ def make_draft(sid: str) -> dict:
     review.synthesize(sid)
     with Session(db_engine) as s:
         return review.draft_view(s.get(ReviewSession, sid).state)
+
+
+class RegisterBody(BaseModel):
+    reg: str = Field(alias="register")  # words | polished | formal
+    sentence_id: str | None = None
+
+
+@app.put("/api/sessions/{sid}/register")
+def put_register(sid: str, req: RegisterBody) -> dict:
+    try:
+        review.set_register(sid, req.reg, req.sentence_id)
+    except ValueError:
+        raise HTTPException(400, "unknown register")
+    with Session(db_engine) as s:
+        return review.draft_view(s.get(ReviewSession, sid).state)
+
+
+@app.post("/api/sessions/{sid}/units/rephrase")
+def rephrase_units(sid: str, req: RegisterBody) -> dict:
+    try:
+        return review.rephrase_units(sid, req.reg)
+    except ValueError:
+        raise HTTPException(400, "unknown register")
 
 
 class SentenceEdit(BaseModel):

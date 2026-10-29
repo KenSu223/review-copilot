@@ -1,5 +1,5 @@
 """PyMuPDF fallback: text blocks in a two-column-aware reading order, regex sentence split,
-word boxes merged per line. Coarser than GROBID (no section tree) but needs no Docker."""
+word boxes merged per line, heading detection by pattern. Coarser than GROBID but needs no Docker."""
 import re
 from pathlib import Path
 
@@ -8,6 +8,20 @@ import pymupdf as fitz
 from . import ParsedDoc
 
 SENT_END = re.compile(r"(?<=[.!?])\s+(?=[A-Z(\[])")
+# Numbered ("4.2 Results", "A.3 Proofs") or well-known unnumbered section headings.
+HEADING = re.compile(r"^((\d{1,2}|[A-H])(\.\d{1,2}){0,2}\.?\s+[A-Z][^.!?]{2,70}|"
+                     r"(Abstract|References|Bibliography|Acknowledge?ments?|Appendix|Appendices|Limitations|"
+                     r"Conclusions?|Broader Impacts?|Ethics Statement|Ethical Considerations|Impact Statement))$")
+
+
+def _assign_sections(blocks: list[dict]) -> None:
+    """Mark heading-like sentences as headings and carry the current section down (GROBID gives this natively)."""
+    section = ""
+    for b in blocks:
+        t = b["text"].strip()
+        if len(t) <= 80 and HEADING.match(t) and not re.search(r"\d\s*%|=|[|πθσβλ∑∫∇]", t):
+            b["kind"], section = "heading", t
+        b["section"] = section
 
 
 def _reading_order(blocks, page_w):
@@ -60,5 +74,6 @@ def parse(path: Path) -> ParsedDoc:
                 clean = re.sub(r"-\s(?=[a-z])", "", sent).strip()
                 if len(clean) > 1:
                     out.append({"kind": "sentence", "section": "", "para": para, "text": clean, "boxes": boxes})
+    _assign_sections(out)
     title = (doc.metadata or {}).get("title") or (out[0]["text"][:200] if out else "")
     return ParsedDoc(title=title, page_sizes=sizes, blocks=out, parser="pymupdf")

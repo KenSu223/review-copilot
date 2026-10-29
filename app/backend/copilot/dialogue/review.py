@@ -2,7 +2,10 @@
 
 Contract (ARR: no generated first drafts; paraphrasing the reviewer is fine):
 - Every evaluative sentence must cite >= 1 of the reviewer's opinion units (their own words).
-- Factual sentences may only use paper facts the reviewer engaged with (their rationales / statement checks).
+- Factual sentences may only use paper facts the reviewer explicitly confirmed (P#: the paper's stated contributions or
+  the evidence of a statement check, ticked by the reviewer; own provenance type, disclosed on export).
+- Every sentence comes in three registers, from the reviewer's own casual words to formal review prose
+  (the faithful-to-professional slider, conversation_redesign.md §6); every register is drift-checked.
 - No new evaluative adjectives; hedges and intensity preserved. Fields the reviewer never addressed stay empty.
 - Scores are entered by the reviewer only; the system never proposes them.
 """
@@ -49,12 +52,14 @@ SYNTH_SCHEMA = {
             "sentences": {"type": "array", "items": {
                 "type": "object",
                 "properties": {
-                    "text": {"type": "string"},
+                    "words": {"type": "string"},
+                    "polished": {"type": "string"},
+                    "formal": {"type": "string"},
                     "kind": {"type": "string", "enum": ["opinion", "fact", "connective"]},
                     "unit_ids": {"type": "array", "items": {"type": "string"}},
                     "block_ids": {"type": "array", "items": {"type": "string"}},
                 },
-                "required": ["text", "kind", "unit_ids", "block_ids"],
+                "required": ["words", "polished", "formal", "kind", "unit_ids", "block_ids"],
                 "additionalProperties": False,
             }},
         },
@@ -66,12 +71,18 @@ SYNTH_SCHEMA = {
 }
 
 SYNTH_SYSTEM = """You organize a peer reviewer's OWN statements into an outline for the ACL Rolling Review form.
-You are not a reviewer and you have no opinions. You may only rephrase what the reviewer said.
+The statements come from a casual chat. You are not a reviewer and you have no opinions. You may only rephrase what
+the reviewer said. Write every sentence in three registers:
+- words: the reviewer's own words, as close to verbatim as possible; fix typos and join fragments only.
+- polished: grammatical review prose in a neutral register; same claims, same polarity, same hedges and intensity.
+- formal: formal ACL-review style; same constraints. Formality never adds certainty, severity, or new judgments.
 Rules:
 - Every opinion sentence must list the unit_ids (U#) it is based on, and must be entailed by those units.
 - Preserve the reviewer's polarity, hedges, and intensity exactly ("seems", "somewhat", "major"). Do not strengthen,
   soften, or generalize. Do not add evaluative adjectives the reviewer did not use.
-- Fact sentences may only restate the paper facts provided below (listed with block ids); list those block_ids.
+- Fact sentences may only restate paper facts the reviewer confirmed (units P#): list the P# in unit_ids and its block
+  ids in block_ids. The paper's stated contributions belong in the summary; other confirmed facts go with the opinions
+  they relate to. Never state any other fact about the paper.
 - Write in the reviewer's own voice, as reviewers write reviews (first person or impersonal: "The experiments
   seem illustrative."), never in the third person ("The reviewer thinks...").
 - Keep sentences short; prefer the reviewer's wording. One idea per sentence. Weaknesses as separate sentences so
@@ -99,11 +110,26 @@ ENTAIL_SCHEMA = {
     "additionalProperties": False,
 }
 
-ENTAIL_SYSTEM = """For each draft review sentence, compare it ONLY with the reviewer's own statements it cites.
+ENTAIL_SYSTEM = """For each draft review sentence (ids look like <sentence>:<register>), compare it ONLY with the reviewer's
+own statements it cites.
 entailed: is every evaluative claim in the sentence supported by those statements (no added judgments)?
 polarity: preserved or changed. intensity: preserved, strengthened (more certain/severe than the reviewer said),
 or softened. note: one short phrase naming any drift (e.g., "'a bit unclear' -> 'lacks clarity'")."""
 
+
+REGISTERS = ["words", "polished", "formal"]
+REPHRASE_SCHEMA = {
+    "type": "object",
+    "properties": {"items": {"type": "array", "items": {"type": "object", "properties": {
+        "uid": {"type": "string"}, "text": {"type": "string"}},
+        "required": ["uid", "text"], "additionalProperties": False}}},
+    "required": ["items"],
+    "additionalProperties": False,
+}
+REPHRASE_SYSTEM = """Rephrase each of a peer reviewer's own casual statements in the requested register, one sentence each.
+polished: grammatical review prose in a neutral register. formal: formal ACL-review style.
+Keep the same claim, polarity, hedges, and intensity. Add no judgments, no certainty, no severity. First person or
+impersonal, never "the reviewer"."""
 
 _LOCKS: dict[str, threading.Lock] = defaultdict(threading.Lock)
 
@@ -174,15 +200,16 @@ def synthesize(sid: str) -> dict:
     with Session(engine) as s:
         checks = [{**e.payload, "turn": e.turn} for e in s.exec(select(Event).where(Event.session_id == sid, Event.type == "check"))]
         blocks = {b.block_id: b.text for b in s.exec(select(Block).where(Block.paper_id == pid))}
-    # Paper facts the reviewer engaged with: blocks cited in statement checks they saw.
-    fact_ids = list(dict.fromkeys(bid for c in checks for seg in c.get("segments", []) for bid in seg.get("cites", [])))
-    facts = "\n".join(f"[{bid}] {blocks[bid]}" for bid in fact_ids[:30] if bid in blocks) or "(none)"
+    # Paper facts enter only when the reviewer confirmed them (P# units); statement checks are used only for conflict flags.
     unit_lines = "\n".join(
-        f"{u['id']} [{u['dimension']}, {u['polarity']}, {u['intensity']}]: \"{u['statement']}\""
-        + (f" because \"{u['rationale']}\"" if u.get("rationale") else "") for u in units) or "(none)"
-    user = f"Reviewer's opinion units:\n{unit_lines}\n\nPaper facts the reviewer engaged with:\n{facts}"
+        (f"{u['id']} [confirmed paper fact; blocks {', '.join(u.get('block_ids', []))}]: \"{u['statement']}\""
+         if u.get("source") == "paper_fact" else
+         f"{u['id']} [{u['dimension']}, {u['polarity']}, {u['intensity']}]: \"{u['statement']}\""
+         + (f" because \"{u['rationale']}\"" if u.get("rationale") else "")) for u in units) or "(none)"
+    user = f"Reviewer's opinion units and confirmed paper facts:\n{unit_lines}"
     data, call = llm.structured("synthesize", SYNTH_SYSTEM, user, SYNTH_SCHEMA)
 
+    register = (state.get("draft") or {}).get("register", "polished")
     valid_u, valid_b = {u["id"] for u in units}, set(blocks)
     sections = []
     for sec in data.get("sections", []):
@@ -191,19 +218,81 @@ def synthesize(sid: str) -> dict:
             uids = [x for x in st.get("unit_ids", []) if x in valid_u]
             bids = [x for x in st.get("block_ids", []) if x in valid_b]
             unsourced = (st["kind"] == "opinion" and not uids) or (st["kind"] == "fact" and not bids)
-            sents.append({"sid": uuid.uuid4().hex[:8], "text": st["text"].strip(), "kind": st["kind"],
-                          "unit_ids": uids, "block_ids": bids, "status": "proposed", "unsourced": unsourced,
-                          "drift": None, "original": st["text"].strip()})
+            variants = {r: st[r].strip() for r in REGISTERS}
+            sents.append({"sid": uuid.uuid4().hex[:8], "variants": variants, "register": None,
+                          "text": variants[register], "kind": st["kind"], "unit_ids": uids, "block_ids": bids,
+                          "status": "proposed", "unsourced": unsourced, "drift": None, "drifts": {},
+                          "original": variants[register]})
         if sents:
             sections.append({"field": sec["field"], "sentences": sents})
-    _entailment(sections, {u["id"]: u for u in units})
+    _entailment(sections, {u["id"]: u for u in units}, register)
     _flag_check_conflicts(sections, units, checks)
     used = {x for sec in sections for st in sec["sentences"] for x in st["unit_ids"]}
-    draft = {"sections": sections, "unused_units": [u["id"] for u in units if u["id"] not in used],
-             "model_call": call.__dict__}
+    draft = {"sections": sections, "register": register,
+             "unused_units": [u["id"] for u in units if u["id"] not in used], "model_call": call.__dict__}
     state["draft"] = draft
     _save(sid, state, ("draft", {"n_sentences": sum(len(s["sentences"]) for s in sections), "model": call.model}))
     return draft
+
+
+def set_register(sid: str, register: str, sentence_id: str | None = None) -> dict:
+    """Faithful-to-professional slider: globally, or for one sentence. Edited sentences keep the reviewer's text."""
+    if register not in REGISTERS:
+        raise ValueError(register)
+    with session_lock(sid):
+        state, _ = _load(sid)
+        draft = state.get("draft") or {}
+        if sentence_id is None:
+            draft["register"] = register
+        for sec in draft.get("sections", []):
+            for st in sec["sentences"]:
+                if sentence_id is not None and st["sid"] != sentence_id:
+                    continue
+                if sentence_id is not None:
+                    st["register"] = register
+                eff = st.get("register") or draft.get("register", "polished")
+                if st["status"] != "edited" and st.get("variants"):
+                    st["text"] = st["variants"][eff]
+                    st["drift"] = st.get("drifts", {}).get(eff)
+        _save(sid, state, ("register", {"register": register, "sentence": sentence_id}))
+        return draft
+
+
+def rephrase_units(sid: str, register: str) -> dict:
+    """My opinions panel: each recorded statement in the chosen register, drift-checked; cached per unit."""
+    if register not in REGISTERS:
+        raise ValueError(register)
+    state, _ = _load(sid)
+    units = [u for u in state.get("units", []) if not u.get("deleted") and u.get("source") != "paper_fact"]
+    cache = state.get("unit_variants", {})
+    todo = [u for u in units if register != "words" and register not in cache.get(u["id"], {})]
+    if todo:
+        user = f"Register: {register}\n" + "\n".join(
+            f"{u['id']}: \"{u['statement']}\"" + (f" because \"{u['rationale']}\"" if u.get("rationale") else "") for u in todo)
+        data, _ = llm.structured("rephrase", REPHRASE_SYSTEM, user, REPHRASE_SCHEMA)
+        got = {it["uid"]: it["text"].strip() for it in data.get("items", [])}
+        items = [f"{u['id']}:{register}: SENTENCE: \"{got[u['id']]}\"\n   REVIEWER SAID: \"{u['statement']}\""
+                 + (f" because \"{u['rationale']}\"" if u.get("rationale") else "") for u in todo if u["id"] in got]
+        drift = {}
+        if items:
+            try:
+                d, _ = llm.structured("entailment", ENTAIL_SYSTEM, "\n".join(items), ENTAIL_SCHEMA)
+                drift = {r["sid"].split(":")[0]: r for r in d.get("results", [])}
+            except Exception:
+                drift = {}
+        with session_lock(sid):
+            state, _ = _load(sid)
+            cache = state.setdefault("unit_variants", {})
+            for uid, text in got.items():
+                cache.setdefault(uid, {})[register] = {"text": text, "drift": drift.get(uid)}
+            _save(sid, state)
+    out = {}
+    for u in units:
+        if register == "words":
+            out[u["id"]] = {"text": u["statement"], "drift": None}
+        elif register in cache.get(u["id"], {}):
+            out[u["id"]] = cache[u["id"]][register]
+    return {"register": register, "units": out}
 
 
 def _flag_check_conflicts(sections: list, units: list, checks: list) -> None:
@@ -230,25 +319,31 @@ def _flag_check_conflicts(sections: list, units: list, checks: list) -> None:
             st["check_conflicts"] = conf
 
 
-def _entailment(sections: list, units: dict) -> None:
+def _entailment(sections: list, units: dict, register: str) -> None:
+    """Drift check of every register of every opinion sentence against the reviewer's own statements."""
     items = []
     for sec in sections:
         for st in sec["sentences"]:
             if st["kind"] == "opinion" and st["unit_ids"]:
                 src = " | ".join(f"\"{units[u]['statement']}\"" + (f" because \"{units[u]['rationale']}\"" if units[u].get("rationale") else "")
                                  for u in st["unit_ids"] if u in units)
-                items.append(f"{st['sid']}: SENTENCE: \"{st['text']}\"\n   REVIEWER SAID: {src}")
+                for r in REGISTERS:
+                    items.append(f"{st['sid']}:{r}: SENTENCE: \"{st['variants'][r]}\"\n   REVIEWER SAID: {src}")
     if not items:
         return
     try:
         data, _ = llm.structured("entailment", ENTAIL_SYSTEM, "\n".join(items), ENTAIL_SCHEMA)
     except Exception:
         return
-    by = {r["sid"]: r for r in data.get("results", [])}
+    for r in data.get("results", []):
+        sid_, _, reg = r["sid"].partition(":")
+        for sec in sections:
+            for st in sec["sentences"]:
+                if st["sid"] == sid_ and reg in REGISTERS:
+                    st["drifts"][reg] = r
     for sec in sections:
         for st in sec["sentences"]:
-            if st["sid"] in by:
-                st["drift"] = by[st["sid"]]
+            st["drift"] = st["drifts"].get(st.get("register") or register)
 
 
 def edit_sentence(sid: str, sentence_id: str, changes: dict) -> dict:
@@ -314,9 +409,16 @@ def export(sid: str, fmt: str = "arr") -> dict:
         v = state.get("scores", {}).get(k, {}).get("value")
         lines.append(f"{meta['label']}: {v if v is not None else '[not set]'}")
     n_user = sum(1 for e in events if e["type"] == "user_msg")
-    disclosure = ("AI-use disclosure: I used a review copilot that answered factual questions about the paper with "
-                  "citations and organized my own statements into this form. All assessments, scores, and opinions are "
-                  f"mine; every evaluative sentence is linked to my own statements ({n_user} dialogue turns logged).")
+    unit_by = {u["id"]: u for u in state.get("units", [])}
+    n_facts = sum(1 for v in keep.values() for st in v
+                  if any(unit_by.get(u, {}).get("source") == "paper_fact" for u in st["unit_ids"]))
+    disclosure = ("AI-use disclosure: I used a review copilot that located passages in the paper, answered factual "
+                  "questions with citations, and organized my own statements into this form. All assessments, scores, "
+                  f"and opinions are mine; every evaluative sentence is linked to my own statements ({n_user} dialogue "
+                  "turns logged).")
+    if n_facts:
+        disclosure += (f" The summary includes {n_facts} sentence(s) restating the paper's own stated contributions, "
+                       "which the tool located and I confirmed.")
     report = {
         "schema_version": "rc-trace/0.1", "paper": {"id": pid, "title": paper.title if paper else ""},
         "session_id": sid, "units": state.get("units", []), "scores": state.get("scores", {}),
@@ -337,6 +439,11 @@ def export(sid: str, fmt: str = "arr") -> dict:
 
 
 def draft_view(state: dict) -> dict:
+    from .criteria import FAMILIARITY
+    fam = (state.get("paper_ctx") or {}).get("familiarity")
     return {"draft": state.get("draft"), "scores": state.get("scores", {}), "score_meta": SCORES,
             "fields": [{"key": k, "label": l} for k, l in FIELDS], "preflight": preflight(state),
-            "dims": [d["key"] for d in DIMENSIONS]}
+            "dims": [d["key"] for d in DIMENSIONS], "registers": REGISTERS,
+            "register": (state.get("draft") or {}).get("register", "polished"),
+            # Shown next to the Confidence score as a reminder of the reviewer's own answer; never a default.
+            "familiarity": FAMILIARITY.get(fam, "")}

@@ -1,12 +1,13 @@
 # Academic Review Copilot: Project Context
 
 > This is the persistent context for the project: core ideas, research questions, the plan, and decisions made so far.
-> Last updated: 2026-10-23. Update this file whenever the plan changes.
+> Last updated: 2026-10-28 (redesign implemented). Update this file whenever the plan changes.
 > Related files:
 > - `docs/prior_art_report.md`: full related-work survey (about 120 items)
 > - `docs/motivation_draft.md`: English motivation and contributions draft, with team notes
 > - `papers/`: downloaded PDFs (local only, gitignored)
 > - `docs/product_plan.md`: the product build plan; this is the current phase
+> - `docs/conversation_redesign.md`: agreed redesign of the dialogue flow (2026-10-28); supersedes `product_plan.md` §2.3–2.8
 > - `docs/research/01–04`: research reports on Socratic patterns from the local ARS skill, Socratic method and elicitation, UI/UX plus review forms plus demo-track requirements, and the tech stack
 
 ## 0. Current phase (updated 2026-10-21) — READ FIRST
@@ -63,7 +64,19 @@
     - false-claim checks 6/6 correct; 0 planted opinions;
     - every gate passes.
   - Key finding: absence facts ("I could not locate X") are the main legitimate-but-salient channel of influence.
+- **Conversation redesign (agreed and implemented 2026-10-28)**: after the advisor meeting. Plan + implementation status (§11) in `docs/conversation_redesign.md`.
+  - Assume a low-effort, AI-reliant reviewer. Lead with evidence at every step: the copilot presents highlighted passages (auto-scrolled in the PDF, navigator), then asks one light question. Casual chat, no ARR vocabulary; formal prose only at synthesis.
+  - Onboarding by reviewer level (L0 beginner … L3 AC), with level-specific questions; per paper: area familiarity (sets paper-internal background + glossary), read status, time budget. L2/L3 who read the paper → quick mode.
+  - Conversation organized by the reviewer's own criteria (`dialogue/criteria.py`); ARR fields stay in the background (coverage meter, draft). Agenda planner (`dialogue/agenda.py`, Opus 5.5) picks passages per criterion at session start.
+  - Per turn: monitor (`dialogue/monitor.py`, Sonnet 5; coverage in code) → statement checks → `allowed_actions()` code boundaries → conversation agent (Opus 5.5, cited, first line `ACTION: …`) → Guard (GLM-5, R1–R8 incl. selection/steering). Calls per turn vary. Prefetch after "Done with this".
+  - Reviewer decides when a topic ends (no auto-advance). Commit-first dropped; first impression only in study mode / quick mode.
+  - Synthesis in three registers (words / polished / formal), drift-checked; slider in draft and My opinions. Paper facts the reviewer ticks become `P#` units (disclosed).
+  - Old engine kept as `dialogue/legacy.py` for the A/B; sessions without a `flow` key are legacy. Persona-suite sessions carry `origin: eval` and are hidden from the app.
+  - Out of scope this round: external (non-paper) background explanations; AC meta-review mode.
+  - Evaluation (2026-10-28, `eval/persona_runs/SUMMARY.md`): new flow passes G1–G7 on DPO and on the ICML'26 paper with an injected prompt. A/B vs commit-first on DPO: −32% typed characters, taste-group self-BLEU 0.084 vs 0.165 (reviews differ more by profile), recall equal (0.93); costs: lower strict precision (0.76 vs 0.83, mostly fact-informed) and more adoption of the paper's own rhetoric (10 vs 2 units). An independent plan audit found 17 gaps + 5 bugs, all fixed (`docs/conversation_redesign.md` §11.1).
+- **Environment note (2026-10-27)**: Docker is no longer installed on this Mac, so GROBID does not run; parsing uses the PyMuPDF fallback (now with pattern-based section headings). `.venv.nosync`, `node_modules`, and `data.nosync` had to be recreated (`make setup`).
 - **Next (P6)**:
+  - User study (evidence-first vs commit-first vs plain chat); pilot the onboarding questions.
   - Component eval scripts.
   - Latency work.
   - ICLR/NeurIPS export mappings.

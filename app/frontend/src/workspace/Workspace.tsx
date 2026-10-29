@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, type Block, type ChatMessage, type Facet, type Paper, type PaperMap, type SessionState } from "../lib/api";
+import { api, type Block, type ChatMessage, type CoverageField, type Facet, type Focus, type Paper, type PaperCtx, type PaperMap, type SessionState } from "../lib/api";
 import { ACTIVE_FILL, FACETS, HIDDEN_FILL } from "../lib/facets";
 import { PdfPane, type Overlay } from "../pdf/PdfPane";
+import { AgendaRail } from "./AgendaRail";
 import { BriefPanel } from "./BriefPanel";
 import { ChatPanel } from "./ChatPanel";
-import { DimensionRail } from "./DimensionRail";
 import { LedgerPanel } from "./LedgerPanel";
+import { PaperSetup } from "./PaperSetup";
 import { SentenceIndex } from "./SentenceIndex";
 import { DraftPanel } from "../review/DraftPanel";
 
@@ -36,9 +37,12 @@ export function Workspace({ paperId, onBack }: { paperId: string; onBack: () => 
     window.getSelection()?.removeAllRanges();
   };
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [needsSetup, setNeedsSetup] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sstate, setSState] = useState<SessionState | null>(null);
-  const [pendingAction, setPendingAction] = useState<{ action: string; nonce: number } | null>(null);
+  const [pendingAction, setPendingAction] = useState<{ text: string; action: string; nonce: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [focus, setFocus] = useState<(Focus & { idx: number }) | null>(null);
   const [enabled, setEnabled] = useState<Record<Facet, boolean>>({ claim: true, method: true, result: true, limitation: true });
   const [active, setActive] = useState<{ key: string; ids: string[] } | null>(null);
   const [jump, setJump] = useState<{ boxes: Block["boxes"]; nonce: number } | null>(null);
@@ -49,16 +53,25 @@ export function Workspace({ paperId, onBack }: { paperId: string; onBack: () => 
     api.getBlocks(paperId).then(setBlocks);
   }, [paperId]);
 
+  const openSession = async (sid: string) => {
+    const sess = await api.getSession(sid);
+    setMessages(sess.messages);
+    setSState(sess.state);
+    setSessionId(sid);
+    setNeedsSetup(false);
+  };
+  const [legacy, setLegacy] = useState<{ id: string; turns: number } | null>(null);
   useEffect(() => {
     (async () => {
       const list = await api.listSessions(paperId);
-      const sid = list[0]?.id ?? (await api.newSession(paperId)).id;
-      const sess = await api.getSession(sid);
-      setMessages(sess.messages);
-      setSState(sess.state);
-      setSessionId(sid);
+      const latest = list.find((x) => x.flow === "evidence");
+      const old = list.find((x) => x.flow === "commit_first" && x.turn > 0);
+      if (old) setLegacy({ id: old.id, turns: old.turn });
+      if (latest) await openSession(latest.id);
+      else setNeedsSetup(true);
     })();
-  }, [paperId]);
+  }, [paperId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const startSession = async (ctx: PaperCtx) => openSession((await api.newSession(paperId, ctx)).id);
 
   const loadMap = useCallback(() => api.getMap(paperId).then(setMap).catch(() => setMap(null)), [paperId]);
   useEffect(() => {
@@ -84,6 +97,24 @@ export function Workspace({ paperId, onBack }: { paperId: string; onBack: () => 
     if (!boxes.length) return;
     setActive({ key, ids });
     setJump({ boxes: boxes.filter((b) => b.page === boxes[0].page), nonce: Date.now() });
+  };
+  // Evidence the copilot presents is highlighted and scrolled to automatically; the navigator steps through it.
+  const jumpTo = (id: string) => {
+    const boxes = byId.get(id)?.boxes ?? [];
+    if (boxes.length) setJump({ boxes: boxes.filter((b) => b.page === boxes[0].page), nonce: Date.now() });
+  };
+  const showFocus = (f: Focus, idx = 0) => {
+    const ids = f.block_ids.filter((id) => byId.has(id));
+    if (!ids.length) return;
+    setFocus({ ...f, block_ids: ids, idx });
+    setActive({ key: `focus-${ids.join(",")}`, ids });
+    jumpTo(ids[idx]);
+  };
+  const step = (d: 1 | -1) => {
+    if (!focus) return;
+    const idx = (focus.idx + d + focus.block_ids.length) % focus.block_ids.length;
+    setFocus({ ...focus, idx });
+    jumpTo(focus.block_ids[idx]);
   };
 
   const overlays: Overlay[] = useMemo(() => {
@@ -118,6 +149,11 @@ export function Workspace({ paperId, onBack }: { paperId: string; onBack: () => 
         <span className="text-xs text-stone-500">
           {blocks.length} blocks · {paper?.parser}
         </span>
+        {sessionId && (
+          <button onClick={() => setNeedsSetup(true)} className="text-xs text-stone-500 hover:underline" title="Start a new review session for this paper">
+            New session
+          </button>
+        )}
         <div className="ml-2 flex rounded-lg border border-stone-300 p-0.5 text-xs">
           {(["dialogue", "draft"] as const).map((m) => (
             <button
@@ -174,6 +210,20 @@ export function Workspace({ paperId, onBack }: { paperId: string; onBack: () => 
                 </button>
               </div>
             )}
+            {focus && active?.key.startsWith("focus-") && (
+              <div className="absolute left-1/2 top-2 z-30 flex max-w-[90%] -translate-x-1/2 items-center gap-2 rounded-full border border-amber-300 bg-white/95 px-3 py-1 text-xs shadow">
+                <span className="truncate font-medium text-amber-900">◎ {focus.title || "From the paper"}</span>
+                {focus.block_ids.length > 1 && (
+                  <span className="flex shrink-0 items-center gap-1 text-stone-600">
+                    <button onClick={() => step(-1)} className="px-1 hover:text-stone-900">‹</button>
+                    {focus.idx + 1}/{focus.block_ids.length}
+                    <button onClick={() => step(1)} className="px-1 hover:text-stone-900">›</button>
+                  </span>
+                )}
+                <span className="shrink-0 text-stone-500">~{focus.read_min} min</span>
+                <button onClick={() => { setFocus(null); setActive(null); }} className="shrink-0 text-stone-400 hover:text-stone-700">✕</button>
+              </div>
+            )}
             <PdfPane
               url={api.pdfUrl(paperId)}
               overlays={overlays}
@@ -183,7 +233,14 @@ export function Workspace({ paperId, onBack }: { paperId: string; onBack: () => 
           </div>
         </section>
 
-        {mode === "draft" && sessionId ? (
+        {needsSetup ? (
+          <aside className="flex min-w-0 flex-[45] flex-col border-l border-stone-200 bg-stone-50">
+            <PaperSetup
+              onStart={startSession}
+              legacy={legacy ? { turns: legacy.turns, open: () => openSession(legacy.id) } : undefined}
+            />
+          </aside>
+        ) : mode === "draft" && sessionId ? (
           <aside className="flex min-w-0 flex-[45] flex-col border-l border-stone-200 bg-white">
             <DraftPanel
               sessionId={sessionId}
@@ -215,24 +272,36 @@ export function Workspace({ paperId, onBack }: { paperId: string; onBack: () => 
               </button>
             ))}
           </nav>
-          {tab === "review" && sstate && (
-            <DimensionRail
-              dims={sstate.dims}
-              current={sstate.current}
-              onGoto={(key) => setPendingAction({ action: `goto:${key}`, nonce: Date.now() })}
+          {tab === "review" && sstate?.agenda && (
+            <AgendaRail
+              state={sstate}
+              busy={busy}
+              onGo={(id) => {
+                const c = sstate.agenda.cards.find((x) => x.id === id);
+                setPendingAction({ text: `Let's look at: ${c?.title ?? id}`, action: `card:${id}`, nonce: Date.now() });
+              }}
+              onDone={() => setPendingAction({ text: "Done with this", action: "done", nonce: Date.now() })}
+              onRail={(id, op) => sessionId && api.rail(sessionId, id, op).then(setSState).catch(() => {})}
+              onDraft={() => setMode("draft")}
+              onOpinions={() => setTab("opinions")}
             />
           )}
           <div className={`min-h-0 flex-1 ${tab === "review" ? "" : "overflow-y-auto"}`}>
             {tab === "review" ? (
               sessionId ? (
                 <ChatPanel
+                  key={sessionId}
                   sessionId={sessionId}
                   messages={messages}
                   setMessages={setMessages}
+                  state={sstate}
                   setState={setSState}
                   byId={byId}
+                  glossary={sstate?.agenda?.glossary ?? []}
                   onCite={(ids) => select(`cite-${ids.join(",")}`, ids)}
+                  onFocus={(f) => showFocus(f)}
                   onOpenDraft={() => setMode("draft")}
+                  onBusy={setBusy}
                   pendingAction={pendingAction}
                   prefill={prefill}
                 />
@@ -242,8 +311,11 @@ export function Workspace({ paperId, onBack }: { paperId: string; onBack: () => 
             ) : tab === "opinions" ? (
               <LedgerPanel
                 units={sstate?.units ?? []}
-                dims={sstate?.dims ?? []}
+                // sessions from the previous version have "dims" instead of a coverage map
+                fields={sstate?.coverage?.fields ?? ((sstate as unknown as { dims?: CoverageField[] })?.dims ?? [])}
                 sessionId={sessionId}
+                byId={byId}
+                onCite={(ids) => select(`cite-${ids.join(",")}`, ids)}
                 onChanged={() => sessionId && api.getSession(sessionId).then((x) => setSState(x.state))}
               />
             ) : tab === "brief" ? (

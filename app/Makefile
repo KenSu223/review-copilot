@@ -30,5 +30,5 @@ test:
 typecheck:
 	cd frontend && pnpm typecheck
 
-eval-personas:    ## persona test suite on a paper: make eval-personas PAPER=<paper_id> [PERSONAS=a,b]
-	cd backend && uv run python -m evals.run --paper "$(PAPER)" $(if $(PERSONAS),--personas $(PERSONAS),)
+eval-personas:    ## persona suite: make eval-personas PAPER=<paper_id> [PERSONAS=a,b] [FLOWS=evidence,commit_first]
+	cd backend && uv run python -m evals.run --paper "$(PAPER)" $(if $(PERSONAS),--personas $(PERSONAS),) $(if $(FLOWS),--flows $(FLOWS),)

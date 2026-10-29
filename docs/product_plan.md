@@ -4,6 +4,8 @@
 > Basis: 4 research reports (`research/01–04`) + the project principles in `../CLAUDE.md`
 > Constraints (from this week's meeting): build a product that **runs locally and works end-to-end**; **no training, no fine-tuning**: call off-the-shelf model APIs directly (default Claude) and implement everything with prompts + a pipeline; the target is an **ACL-family demo track**, and research novelty is not a goal
 
+> **Note (2026-10-28):** the conversation flow in §2.3–2.8 (fixed ARR-dimension order, commit-first openers, auto-advance) is superseded by [`conversation_redesign.md`](conversation_redesign.md). The firewall rules (§2.2) and non-leading rules (§2.9) still apply.
+
 ---
 
 ## 0. TL;DR

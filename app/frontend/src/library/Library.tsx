@@ -38,7 +38,12 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
-      <h1 className="text-2xl font-semibold tracking-tight">Review Copilot</h1>
+      <div className="flex items-center">
+        <h1 className="flex-1 text-2xl font-semibold tracking-tight">Review Copilot</h1>
+        <a href="#/profile" className="rounded-md border border-stone-300 px-3 py-1 text-xs text-stone-600 hover:bg-stone-100">
+          Your reviewer profile
+        </a>
+      </div>
       <p className="mt-1 text-sm text-stone-500">
         Facts from the paper, judgments from you. Open a paper to start reviewing.
       </p>
@@ -60,7 +65,7 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
       >
         <input type="file" accept="application/pdf" className="hidden" onChange={(e) => onFiles(e.target.files)} />
         <span className="font-medium">Drop a paper PDF here, or click to choose</span>
-        <span className="mt-1 text-stone-500">Parsed locally (GROBID). Use public papers for demos.</span>
+        <span className="mt-1 text-stone-500">Parsed locally (GROBID, or PyMuPDF if GROBID is not running). Use public papers for demos.</span>
       </label>
 
       <form

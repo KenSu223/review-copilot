@@ -1,6 +1,6 @@
-"""Deterministic dialogue policy (no LLM calls)."""
+"""Legacy commit-first policy (kept for the A/B comparison; no LLM calls)."""
 from copilot.dialogue.dimensions import ORDER
-from copilot.dialogue.engine import decide, dim_status, new_state
+from copilot.dialogue.legacy import decide, dim_status, new_state
 from copilot.dialogue.review import preflight
 
 PMAP = {"claims": [{"text": "X improves Y", "block_ids": ["s-0001"]}], "results": [], "models_and_methods": [],
